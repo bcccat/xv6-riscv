@@ -24,7 +24,7 @@ main(int argc, char *argv[])
 
   if(pid == 0){
     read(p[0], buff, sizeof(buff));
-    printf("%d: Received: %s\n", getpid(), buff);
+    printf("%d: received %s\n", getpid(), buff);
     write(p[1], "pong", 5);
 
     close(p[0]);
@@ -34,7 +34,7 @@ main(int argc, char *argv[])
     write(p[1], "ping", 5);
     wait(0);
     read(p[0], buff, sizeof(buff));
-    printf("%d: Received: %s\n", getpid(), buff);
+    printf("%d: received %s\n", getpid(), buff);
 
     close(p[0]);
     close(p[1]);
