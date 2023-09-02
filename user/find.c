@@ -22,8 +22,20 @@ fmtname(char *path)
   return buf;
 }
 
+// use const char* to make sure the original value is kept as the same 
+const char* 
+getname(char *path)
+{
+  char *p;
+  // Find first character after last slash.
+  for(p=path+strlen(path); p >= path && *p != '/'; p--)
+    ;
+  p++;
+  return p;
+}
+
 void
-ls(char *path)
+find(char *path, char* name)
 {
   char buf[512], *p;
   int fd;
@@ -31,20 +43,24 @@ ls(char *path)
   struct stat st;
 
   if((fd = open(path, 0)) < 0){
-    fprintf(2, "ls: cannot open %s\n", path);
+    fprintf(2, "find: cannot open %s\n", path);
     return;
   }
 
   if(fstat(fd, &st) < 0){
-    fprintf(2, "ls: cannot stat %s\n", path);
+    fprintf(2, "find: cannot stat %s\n", path);
     close(fd);
     return;
   }
 
   switch(st.type){
   case T_DEVICE:
-  case T_FILE:
-    printf("%s %d %d %l\n", fmtname(path), st.type, st.ino, st.size);
+  case T_FILE: ; // ; for variable defination 
+    const char* f_name;
+    f_name = getname(path);
+    if(strcmp(f_name, name) == 0){
+      printf("%s\n", path);
+    }
     break;
 
   case T_DIR:
@@ -55,16 +71,15 @@ ls(char *path)
     strcpy(buf, path);
     p = buf+strlen(buf);
     *p++ = '/';
+
+    char* ebuf = p;
     while(read(fd, &de, sizeof(de)) == sizeof(de)){
-      if(de.inum == 0)
+      if(de.inum == 0 || strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0)
         continue;
-      memmove(p, de.name, DIRSIZ); // initialize buf name 
-      p[DIRSIZ] = 0;
-      if(stat(buf, &st) < 0){
-        printf("ls: cannot stat %s\n", buf);
-        continue;
-      }
-      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      strcpy(ebuf, de.name);
+      p = ebuf+strlen(de.name);
+      *p = 0;
+      find(buf, name);
     }
     break;
   }
@@ -74,13 +89,11 @@ ls(char *path)
 int
 main(int argc, char *argv[])
 {
-  int i;
-
-  if(argc < 2){
-    ls(".");
-    exit(0);
+  if(argc != 3){
+    fprintf(2, "find: invalid operation!\n");
+    exit(1);
   }
-  for(i=1; i<argc; i++)
-    ls(argv[i]);
+  find(argv[1], argv[2]);
+
   exit(0);
 }
